@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yan's Restaurant｜智慧點餐系統</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:#fffaf4;color:#2f2925}
+  header{background:linear-gradient(135deg,#8b2f2f,#c75b39);color:white;padding:42px 20px;text-align:center}
+  header h1{font-size:2.25rem;margin-bottom:8px} header p{opacity:.9}
+  .wrap{max-width:1050px;margin:auto;padding:28px 18px 60px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+  button{border:0;cursor:pointer;font-size:15px}
+  .filter{padding:9px 16px;border-radius:999px;background:#eee3d8;color:#513d31}
+  .filter.active{background:#8b2f2f;color:#fff}
+  h2{margin:12px 0 18px}
+  .layout{display:grid;grid-template-columns:1fr 330px;gap:26px}
+  .menu{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .card{background:#fff;border:1px solid #eadfd5;border-radius:18px;padding:18px;box-shadow:0 5px 16px rgba(70,45,30,.06)}
+  .emoji{font-size:42px;margin-bottom:10px}.card h3{margin-bottom:6px}.desc{color:#76665b;font-size:14px;min-height:40px}
+  .card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:15px}
+  .price{font-weight:700;color:#9a382d}.add{background:#2f6b4f;color:white;padding:8px 13px;border-radius:9px}
+  .cart{background:white;border:1px solid #eadfd5;border-radius:18px;padding:20px;height:max-content;position:sticky;top:15px}
+  .cart h2{margin-top:0}.empty{color:#95867c;padding:20px 0;text-align:center}
+  .cart-item{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 0;border-bottom:1px solid #eee}
+  .controls{display:flex;align-items:center;gap:7px}.qty{width:27px;height:27px;border-radius:7px;background:#eee}
+  .total{display:flex;justify-content:space-between;font-size:19px;font-weight:700;margin:20px 0 12px}
+  .checkout{width:100%;padding:12px;border-radius:10px;background:#8b2f2f;color:#fff;font-weight:700}
+  .clear{width:100%;padding:9px;margin-top:8px;border-radius:10px;background:#eee;color:#555}
+  .notice{display:none;margin-top:15px;background:#e7f5ec;color:#245d3d;padding:13px;border-radius:10px;line-height:1.5}
+  footer{text-align:center;color:#8c7b70;padding:25px}
+  @media(max-width:760px){.layout{grid-template-columns:1fr}.menu{grid-template-columns:1fr}.cart{position:static}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🍽️ Yan's Restaurant</h1>
+  <p>簡單、快速、好操作的互動式點餐網站</p>
+</header>
+
+<main class="wrap">
+  <h2>今日菜單</h2>
+  <div class="toolbar">
+    <button class="filter active" data-cat="all">全部</button>
+    <button class="filter" data-cat="main">主餐</button>
+    <button class="filter" data-cat="side">小點</button>
+    <button class="filter" data-cat="drink">飲料</button>
+    <button class="filter" data-cat="dessert">甜點</button>
+  </div>
+
+  <div class="layout">
+    <section class="menu" id="menu"></section>
+    <aside class="cart">
+      <h2>🛒 我的餐點</h2>
+      <div id="cartItems"><div class="empty">尚未加入餐點</div></div>
+      <div class="total"><span>總計</span><span id="total">NT$0</span></div>
+      <button class="checkout" id="checkout">確認點餐</button>
+      <button class="clear" id="clear">清空購物車</button>
+      <div class="notice" id="notice"></div>
+    </aside>
+  </div>
+</main>
+<footer>Vibe Coding Project · Interactive Restaurant Ordering System</footer>
+
+<script>
+const foods=[
+ {id:1,name:"經典牛肉漢堡",price:180,cat:"main",icon:"🍔",desc:"牛肉排、生菜、番茄與起司"},
+ {id:2,name:"奶油培根義大利麵",price:220,cat:"main",icon:"🍝",desc:"濃郁奶油醬搭配培根與香草"},
+ {id:3,name:"香煎雞腿排",price:240,cat:"main",icon:"🍗",desc:"外皮香脆、肉質多汁的雞腿排"},
+ {id:4,name:"黃金薯條",price:80,cat:"side",icon:"🍟",desc:"酥脆現炸薯條"},
+ {id:5,name:"田園沙拉",price:110,cat:"side",icon:"🥗",desc:"新鮮生菜與季節蔬菜"},
+ {id:6,name:"冰紅茶",price:50,cat:"drink",icon:"🧋",desc:"清爽微甜紅茶"},
+ {id:7,name:"拿鐵咖啡",price:90,cat:"drink",icon:"☕",desc:"濃縮咖啡與香醇牛奶"},
+ {id:8,name:"巧克力蛋糕",price:120,cat:"dessert",icon:"🍰",desc:"濃郁巧克力蛋糕"}
+];
+let cart={};
+
+function renderMenu(cat="all"){
+ const box=document.getElementById("menu");
+ const list=cat==="all"?foods:foods.filter(f=>f.cat===cat);
+ box.innerHTML=list.map(f=>`
+ <article class="card">
+   <div class="emoji">${f.icon}</div>
+   <h3>${f.name}</h3><p class="desc">${f.desc}</p>
+   <div class="card-bottom"><span class="price">NT$${f.price}</span>
+   <button class="add" onclick="addItem(${f.id})">＋ 加入</button></div>
+ </article>`).join("");
+}
+function addItem(id){cart[id]=(cart[id]||0)+1;renderCart();}
+function changeQty(id,d){cart[id]+=d;if(cart[id]<=0)delete cart[id];renderCart();}
+function renderCart(){
+ const box=document.getElementById("cartItems");
+ const ids=Object.keys(cart);
+ if(!ids.length){box.innerHTML='<div class="empty">尚未加入餐點</div>';document.getElementById("total").textContent="NT$0";return;}
+ let total=0;
+ box.innerHTML=ids.map(id=>{
+   const f=foods.find(x=>x.id==id), q=cart[id]; total+=f.price*q;
+   return `<div class="cart-item"><div><strong>${f.name}</strong><br><small>NT$${f.price} × ${q}</small></div>
+   <div class="controls"><button class="qty" onclick="changeQty(${id},-1)">−</button><span>${q}</span><button class="qty" onclick="changeQty(${id},1)">＋</button></div></div>`;
+ }).join("");
+ document.getElementById("total").textContent="NT$"+total;
+}
+document.querySelectorAll(".filter").forEach(btn=>btn.onclick=()=>{
+ document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));
+ btn.classList.add("active"); renderMenu(btn.dataset.cat);
+});
+document.getElementById("clear").onclick=()=>{cart={};renderCart();document.getElementById("notice").style.display="none";};
+document.getElementById("checkout").onclick=()=>{
+ const ids=Object.keys(cart), n=document.getElementById("notice");
+ if(!ids.length){n.style.display="block";n.textContent="請先選擇至少一項餐點喔！";return;}
+ const count=ids.reduce((s,id)=>s+cart[id],0);
+ const total=ids.reduce((s,id)=>s+foods.find(f=>f.id==id).price*cart[id],0);
+ n.style.display="block";n.innerHTML=`✅ 點餐成功！<br>共 ${count} 份餐點，總金額 NT$${total}。謝謝您的訂購！`;
+};
+renderMenu();
+</script>
+</body>
+</html>
